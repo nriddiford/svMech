@@ -15,16 +15,14 @@ def main():
     parser.add_argument('-s', action="store", help="Split read sequence for detection of insertions", dest="split")
     parser.add_argument('-n', action="store", help="Number of bases to look for extended homology. [Default: 200 if microhomology found, 10 if not]", dest='homspace',type=int)
     parser.add_argument('-t', action="store_true", help="Run in test mode [Overides -p & -s values]", dest='test')
-    parser.add_argument('-tm', action="store_true", help="Run in test mode with microhomolgy", dest='testmh')
 
     args = parser.parse_args()
     pos = args.location
     split_read = args.split
     n=args.homspace
     test=args.test
-    testmh=args.testmh
     genome = pysam.Fastafile("/Users/Nick_curie/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
-    run_script(pos, n, split_read, genome, test,testmh)
+    run_script(pos, n, split_read, genome, test)
 
 def reversed_seq(x):
     """
@@ -54,9 +52,11 @@ def microhomology(seq1, seq2):
             position = i
             longest_hom = len(seq2[:i])
             mhseq = seq2[:i]
+            return(position , longest_hom, mhseq)
         position += 1
         i -= 1
-    return(position , longest_hom, mhseq)
+    if longest_hom == 0:
+        return False
 
 
 def getMechanism(homlen, inslen):
@@ -87,7 +87,7 @@ def longestMatch(seq1, seq2):
     # print("Seq2:%s (%s bases downstream from breakpoint)") % (seq2, len(seq2))
     return(seq1_start, seq1_end, seq2_start, seq2_end, seq)
 
-def run_script(pos, n, split_read, genome, test, testmh):
+def run_script(pos, n, split_read, genome, test):
     if not test:
         (chrom1, bp1, bp2) = get_parts(pos)
 
@@ -101,15 +101,17 @@ def run_script(pos, n, split_read, genome, test, testmh):
         # upstream_seq = reversed_seq(upstream_n)
     else:
         # with mh
-        if testmh:
-            print("Running in test mode with simulated microhomology")
-            upstream_seq   = 'GGGAATTTTTTTTTTCCCAA'
-            downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
-        else:
-            print("Running in test mode with no simulated microhomolgy")
-            upstream_seq   = 'GGGAATTTTTTTTTTCCCAT'
-            downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
+        print("Running in test mode")
+
+        upstream_seq = 'GGGGGTTTTTTTTTTCCCAA'
+        downstream_seq = 'CCCAATTTTTTTTTTGGGGG'
+
+        # without mh
+        # upstream_seq = 'GGGGGTTTTTTTTTTCCCAA'
+        # downstream_seq = 'GGGAATTTTTTTTTTGGGGG'
+
         # split_read = 'TTTTTCCCAAGGGAATTTTT'
+
         # split_read = reversed_seq(split_read)
 
     ##################
@@ -156,33 +158,21 @@ def run_script(pos, n, split_read, genome, test, testmh):
 
     # upstream_seq[-n:] takes n characters from the end of the string
     (downstream_start, downstream_end, upstream_start, upstream_end, homseq) = longestMatch(downstream_seq[0:n],upstream_seq[-n:])
-
     if len(homseq) > 0:
-        # downstream_spacer = len(upstream_seq) - n  +  upstream_start - downstream_start
+        downstream_spacer = len(upstream_seq)  - n  +  upstream_start - downstream_start
         print("* Longest homologous sequence +/- %s bp from breakpoint: %s (%s bp)\n") % (n, homseq, len(homseq))
 
         seq_diff = len(upstream_seq) - len(upstream_seq[-n:])
 
-        upshift=0
-        downshift=0
-
-        if upstream_start - downstream_start > 0:
-            downshift = upstream_start - downstream_start
-        else:
-            upshift = downstream_start - upstream_start
-
-        upspace   = " "*upshift
-        downspace = " "*downshift
-
         umarker = " "*(upstream_start+seq_diff) + "^"*len(homseq)
-        dmarker = " "*downstream_start + "^"*len(homseq)
+        dmarker = " "*(downstream_start+downstream_spacer) + "^"*len(homseq)
 
-        # padded_downstream = " "*downstream_spacer + downstream_seq
+        padded_downstream = " "*downstream_spacer + downstream_seq
 
-        print(" Upstream:      %s%s")   % (upspace, upstream_seq)
-        print(" Homology:      %s%s")   % (upspace, umarker)
-        print(" Downstream:    %s%s")   % (downspace, downstream_seq)
-        print(" Homology:      %s%s\n") % (downspace, dmarker)
+        print(" Upstream:      %s") % (upstream_seq)
+        print(" Homology:      %s") % (umarker)
+        print(" Downstream:    %s") % (padded_downstream)
+        print(" Homology:      %s\n") % (dmarker)
 
     else:
         print("\n* No homology found +/- %s bp from breakpoint\n") % (n)
@@ -230,7 +220,7 @@ def run_script(pos, n, split_read, genome, test, testmh):
                 print(split_read[difference:])
 
                 seqbuffer = " "*(5+len(split_read[0:split_end_up-len(add2split)]))
-                print(" Split read:    %s--/--%s%s%s") % (split_read[0:split_end_up-len(add2split)], add2split, deletion_fill, split_read[split_end_up:])
+                print(" Split read:    %s--/--%s%s%s") % (split_read[0:split_end_up-len(add2split)],deletion_fill, add2split, split_read[split_end_up:])
                 print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[0:downstream_end])
 
 
@@ -241,22 +231,13 @@ def run_script(pos, n, split_read, genome, test, testmh):
                 print(" Upstream:      %s") % (upstream_seq[upstream_start:])
                 print(" Split read:    %s--/--%s\n") % (split_read[split_start_up:split_end_up], split_read[split_end_up:len(split_read)])
 
-                
+
         else:
             if deletion_size > 0:
                 deletion_fill = "."*(deletion_size)
-                deleted_bases = upstream_seq[-deletion_size:]
-
-                # print(split_read[split_end-add2split:split_end])
-                # print(split_end_up, longest_hom, deletion_size)
-                # difference = (split_end_up - longest_hom) + deletion_size
-                # print(difference)
-                # print(split_read[difference:])
-                #
-                # seqbuffer = " "*(5+len(split_read[0:split_end_up-len(add2split)]))
-                # print(" Split read:    %s--/--%s%s%s") % (split_read[0:split_end_up-len(add2split)],deletion_fill, add2split, split_read[split_end_up:])
-                # print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[0:downstream_end])
-
+                print("deletion of %s bases(%s)" % (deletion_size, deletion_fill))
+                print(" Upstream:      %s") % (upstream_seq[upstream_start:])
+                print(" Split read:    %s--/--%s\n") % (split_read[split_start_up:split_end_up], split_read[split_end_up:len(split_read)])
 
             else:
                 print("\n* No microhomolgy found, and no deletion or insertion at breakpoint")

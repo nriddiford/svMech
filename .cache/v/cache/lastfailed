@@ -1,4 +1,3 @@
 {
-  "test_microhology.py": true, 
   "test_microhology.py::MicroHomTestCase::test_deletions": true
 }

@@ -49,19 +49,25 @@ class MicroHomTestCase(unittest.TestCase):
         self.assertEqual(len(seq), 0)
 
 
+    # def test_script(self):
+    #     """Does script() successfully report matches in these sequences?"""
+    #     (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCAAGGGGGTTTTT', '', 1)
+    #     self.assertEqual(longest_hom, 5)
+    #     self.assertTrue(mhseq == 'CCCAA')
+    #     self.assertFalse(mhseq == 'CACAG')
+    #     self.assertTrue(homseq == 'TTTTTTTTTT')
+    #     self.assertEqual(len(homseq), 10)
+    #     # self.assertTrue(deletion_size == 0)
+    #
+    # def test_deletions(self):
+    #     """Does script() successfully report matches in these sequences?"""
+    #     (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCGGGGGTTTTT', '', 1)
+    #     # self.assertTrue(deletion_size == 0)
 
-    def test_script(self):
-        """Does longestMatch() successfully report matches in these sequences?"""
-        (longest_hom, mhseq, homseq) = run_script('X:1-2', 20, 'TTTTTCCCCCTTTTT', genome='',test=1)
-        self.assertEqual(longest_hom, 5)
-        self.assertTrue(mhseq == 'CCCAA')
-        self.assertTrue(homseq == 'TTTTTTTTTT')
-        self.assertEqual(len(homseq), 10)
 
 
 
 
-        # self.assertEqual(len(seq), 0)
 
 
 if __name__ == '__main__':
