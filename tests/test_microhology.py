@@ -1,7 +1,11 @@
 import unittest
 
-from microhom import microhomology, longestMatch, run_script
-from microhom import reversed_seq
+from microhom import (
+    microhomology,
+    longestMatch,
+    run_script,
+    reversed_seq
+)
 
 class MicroHomTestCase(unittest.TestCase):
     """Tests for `microhom.py`."""
