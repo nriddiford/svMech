@@ -1,6 +1,6 @@
 import unittest
 
-from microhom import microhomology
+from microhom import microhomology, longestMatch, run_script
 from microhom import reversed_seq
 
 class MicroHomTestCase(unittest.TestCase):
@@ -25,11 +25,40 @@ class MicroHomTestCase(unittest.TestCase):
         (position, longest_hom, mhseq) =  microhomology('GGGGGTTTTTTTTTT', 'TTTTTTTTGGGGG')
         self.assertEqual(longest_hom, 8)
 
+
     # reversed_seq()
     def test_reversed_seq(self):
         """Does reversed_seq() successfully reverse these sequences?"""
         self.assertEqual(reversed_seq('ATGC'), 'CGTA')
         self.assertEqual(reversed_seq('AAAA'), 'AAAA')
+
+
+    # Tests for longestMatch
+    def test_match(self):
+        """Does longestMatch() successfully report matches in these sequences?"""
+        (downstream_start, downstream_end, upstream_start, upstream_end, seq) = longestMatch('AAACCCCCCCAAA','GGGCCCCCCCGGG')
+        self.assertEqual(len(seq), 7)
+
+    def test_no_match(self):
+        """Does longestMatch() successfully report matches in these sequences?"""
+        (downstream_start, downstream_end, upstream_start, upstream_end, seq) = longestMatch('AAAAAAAAAA','GGGGGGGGGG')
+        self.assertEqual(len(seq), 0)
+
+
+
+    def test_script(self):
+        """Does longestMatch() successfully report matches in these sequences?"""
+        (longest_hom, mhseq, homseq) = run_script('X:1-2', 20, 'TTTTTCCCCCTTTTT', genome='',test=1)
+        self.assertEqual(longest_hom, 5)
+        self.assertTrue(mhseq == 'CCCAA')
+        self.assertTrue(homseq == 'TTTTTTTTTT')
+        self.assertEqual(len(homseq), 10)
+
+
+
+
+        # self.assertEqual(len(seq), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

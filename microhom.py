@@ -14,15 +14,16 @@ def main():
     parser.add_argument('-p', action="store", help="Breakpoint position (chr:bp1-bp2) [Required]", dest='location', required=True)
     parser.add_argument('-s', action="store", help="Split read sequence for detection of insertions", dest="split")
     parser.add_argument('-n', action="store", help="Number of bases to look for extended homology. [Default: 200 if microhomology found, 10 if not]", dest='homspace',type=int)
-    #
+    parser.add_argument('-t', action="store_true", help="Run in test mode [Overides -p & -s values]", dest='test')
+
     args = parser.parse_args()
     pos = args.location
     # homspace = args.homspace
     split_read = args.split
     n=args.homspace
-
+    test=args.test
     genome = pysam.Fastafile("/Users/Nick_curie/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
-    run_script(pos, n, split_read, genome)
+    run_script(pos, n, split_read, genome,test)
 
 def reversed_seq(x):
     """
@@ -84,33 +85,35 @@ def longestMatch(seq1, seq2):
     seq2_start = match[1]
     seq2_end = match[1]+match[2]
 
-    print("Seq1:%s\nSeq2:%s") % (seq1, seq2)
-    # print(match)
+    print("Seq1:%s (%s bases upstream from breakpoint)") % (seq1, len(seq1))
+    print("Seq2:%s (%s bases downstream from breakpoint)") % (seq2, len(seq2))
+
     return(seq1_start, seq1_end, seq2_start, seq2_end, seq)
 
-def run_script(pos, n, split_read, genome):
-    (chrom1, bp1, bp2) = get_parts(pos)
+def run_script(pos, n, split_read, genome,test):
+    if not test:
+        (chrom1, bp1, bp2) = get_parts(pos)
 
-    # bp1 -= 1
-    bp2 -= 1
-    upstream = bp1 - 100
-    downstream = bp2 + 100
+        # bp1 -= 1
+        bp2 -= 1
+        upstream = bp1 - 100
+        downstream = bp2 + 100
 
-    upstream_seq = genome.fetch(chrom1, upstream, bp1)
-    downstream_seq = genome.fetch(chrom1, bp2, downstream)
-    # upstream_seq = reversed_seq(upstream_n)
+        upstream_seq = genome.fetch(chrom1, upstream, bp1)
+        downstream_seq = genome.fetch(chrom1, bp2, downstream)
+        # upstream_seq = reversed_seq(upstream_n)
+    else:
+        # with mh
+        upstream_seq = 'GGGGGTTTTTTTTTTCCCAA'
+        downstream_seq = 'CCCAATTTTTTTTTTGGGGG'
 
-    # with mh
-    upstream_seq = 'GGGGGTTTTTTTTTTCCCAA'
-    downstream_seq = 'CCCAATTTTTTTTTTGGGGG'
+        # without mh
+        # upstream_seq = 'GGGGGTTTTTTTTTTCCCAA'
+        # downstream_seq = 'GGGAATTTTTTTTTTGGGGG'
 
-    # without mh
-    # upstream_seq = 'GGGGGTTTTTTTTTTCCCAA'
-    # downstream_seq = 'GGGAATTTTTTTTTTGGGGG'
+        # split_read = 'TTTTTCCCAAGGGAATTTTT'
 
-    split_read = 'TTTTTCCCAAGGGAATTTTT'
-
-    # split_read = reversed_seq(split_read)
+        # split_read = reversed_seq(split_read)
 
     ##################
     ## Microomology ##
@@ -119,7 +122,10 @@ def run_script(pos, n, split_read, genome):
     print("Upstream:   %s") % (upstream_seq)
     print("Downstream: %s") % (downstream_seq)
 
-    (position, longest_hom, mhseq) =  microhomology(upstream_seq, downstream_seq)
+    if microhomology(upstream_seq, downstream_seq):
+        (position, longest_hom, mhseq) =  microhomology(upstream_seq, downstream_seq)
+    else:
+        (position, longest_hom, mhseq) = (0,0,'')
 
     if(longest_hom>0):
         print("")
@@ -152,22 +158,26 @@ def run_script(pos, n, split_read, genome):
          n = len(upstream_seq)
 
     # upstream_seq[-n:] takes n characters from the end of the string
-    (downstream_start, downstream_end, upstream_start, upstream_end, seq) = longestMatch(downstream_seq[0:n],upstream_seq[-n:])
+    (downstream_start, downstream_end, upstream_start, upstream_end, homseq) = longestMatch(downstream_seq[0:n],upstream_seq[-n:])
+    if len(homseq)>0:
 
-    downstream_spacer = len(upstream_seq)  - n  +  upstream_start - downstream_start
-    print("* Longest homologous sequence +/- %s bp from breakpoint: %s (%s bp)") % (n, seq, len(seq))
+        downstream_spacer = len(upstream_seq)  - n  +  upstream_start - downstream_start
+        print("* Longest homologous sequence +/- %s bp from breakpoint: %s (%s bp)\n") % (n, homseq, len(homseq))
 
-    seq_diff = len(upstream_seq) - len(upstream_seq[-n:])
+        seq_diff = len(upstream_seq) - len(upstream_seq[-n:])
 
-    umarker = " "*(upstream_start+seq_diff) + "^"*len(seq)
-    dmarker = " "*(downstream_start+downstream_spacer) + "^"*len(seq)
+        umarker = " "*(upstream_start+seq_diff) + "^"*len(homseq)
+        dmarker = " "*(downstream_start+downstream_spacer) + "^"*len(homseq)
 
-    padded_downstream = " "*downstream_spacer + downstream_seq
+        padded_downstream = " "*downstream_spacer + downstream_seq
 
-    print(" Upstream:      %s") % (upstream_seq)
-    print(" Homology:      %s") % (umarker)
-    print(" Downstream:    %s") % (padded_downstream)
-    print(" Homology:      %s\n") % (dmarker)
+        print(" Upstream:      %s") % (upstream_seq)
+        print(" Homology:      %s") % (umarker)
+        print(" Downstream:    %s") % (padded_downstream)
+        print(" Homology:      %s\n") % (dmarker)
+
+    else:
+        print("\n* No homology found +/- %s bp from breakpoint\n") % (n)
 
 
     if split_read is not None:
@@ -175,13 +185,12 @@ def run_script(pos, n, split_read, genome):
         ## Inserions ##
         ###############
 
-        print("\n* Split read aligned to upstream sequence:")
+        print("* Split read aligned to upstream sequence:")
         # Align split read to upstream seq (normal orientation)
         (upstream_start, upstream_end, split_start_up, split_end_up, upseq) = longestMatch(upstream_seq, split_read)
         print(upstream_start, upstream_end, split_start_up, split_end_up)
         aligned_up = len(upseq)
         deletion_size= len(upstream_seq[upstream_end:])
-
 
         # microhomolgy?
         if longest_hom > 0:
@@ -243,6 +252,7 @@ def run_script(pos, n, split_read, genome):
 
 
         bp_start = split_end_up # for extracting the inserted seq
+
 
         # Align split read to downstream seq (normal orientation)
         # seq = Seq(split_read)
@@ -364,6 +374,8 @@ def run_script(pos, n, split_read, genome):
     #
     #
     # #
+    return(longest_hom, mhseq, homseq)
+
 
 if __name__ == '__main__':
     main()
