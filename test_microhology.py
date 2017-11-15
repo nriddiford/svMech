@@ -48,13 +48,24 @@ class MicroHomTestCase(unittest.TestCase):
     def test_no_hom_no_del_no_ins(self):
         (position, longest_hom, mhseq) =  microhomology('TTCCCC', 'ATGGC')
         self.assertEqual(len(mhseq), 0)
-        (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTCCCATCCCAAGGGTTT', '', 1,0)
+
+        """
+        upstream_seq   = 'GGGAATTTTTTTTTTCCCAT'
+        downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
+        """
+
+        (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCATCCCAAGGG', '', 1,0)
         self.assertTrue(delsize == 0)
 
 
     def test_microhomology_no_deletion(self):
-        """Does script() successfully report matches in these sequences?"""
-        (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCAAGGGGGTTTTT', '', 1,1)
+        """Does script() successfully report matches in these sequences?
+
+        upstream_seq   = 'GGGAATTTTTTTTTTCCCAA'
+        downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
+
+        """
+        (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCAAGGGTTTTT', '', 1,1)
         self.assertEqual(longest_hom, 5)
         self.assertTrue(mhseq == 'CCCAA')
         self.assertFalse(mhseq == 'CACAG')
@@ -62,17 +73,18 @@ class MicroHomTestCase(unittest.TestCase):
         self.assertEqual(len(homseq), 10)
 
     def test_microhomology_deletion(self):
-        """Does script() successfully report matches in these sequences?"""
+        """Does script() successfully report matches in these sequences?
+
+        upstream_seq   = 'GGGAATTTTTTTTTTCCCAA'
+        downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
+
+        """
         (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCAAGGGTTTTT', '', 1,1)
         self.assertTrue(delsize == 0)
+
         (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCGGGTTTTT', '', 1,1)
         self.assertTrue(delsize == 2)
         self.assertTrue(delbases == 'AA')
-        # (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCAAGGGTTTTT', '', 1)
-        # self.assertTrue(delsize == 2)
-        # self.assertTrue(delbases == 'GG')
-
-
 
 
 
