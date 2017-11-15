@@ -93,8 +93,8 @@ def run_script(pos, n, split_read, genome, test, testmh):
 
         # bp1 -= 1
         bp2 -= 1
-        upstream = bp1 - 100
-        downstream = bp2 + 100
+        upstream = bp1 - 50
+        downstream = bp2 + 50
 
         upstream_seq = genome.fetch(chrom1, upstream, bp1)
         downstream_seq = genome.fetch(chrom1, bp2, downstream)
@@ -146,7 +146,7 @@ def run_script(pos, n, split_read, genome, test, testmh):
         if longest_hom<=2:
             n=10
         else:
-            n=200
+            n=50
 
     ##############
     ## Homology ##
@@ -312,6 +312,20 @@ def run_script(pos, n, split_read, genome, test, testmh):
                 # print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[0:downstream_end])
 
 
+            if insertion_size > 0:
+                (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read[split_end_up:])
+
+
+                inserted_seq = split_read[split_end_up:split_end_up+insertion_size]
+                print("* %s bp insertion '%s' at breakpoint\n") % (insertion_size, inserted_seq)
+
+                seqbuffer = " "*((aligned_up+5+insertion_size+2+2))
+                add2split = "*"*len(mhseq)
+                add2split = ''
+
+                print(" Split read:    %s--/--[%s]--%s%s") % (split_read[0:split_end_up], split_read[split_end_up:split_end_up+insertion_size],add2split, split_read[split_end_up+insertion_size:])
+                print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq)
+
             else:
                 print("\n* No microhomolgy found, and no deletion or insertion at breakpoint")
 
@@ -334,7 +348,6 @@ def run_script(pos, n, split_read, genome, test, testmh):
 
         # (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read)
 
-    return(longest_hom, mhseq, homseq, deletion_size, deleted_bases, insertion_size, inserted_seq)
 
 
         # if downstream_start == split_start:
@@ -412,23 +425,25 @@ def run_script(pos, n, split_read, genome, test, testmh):
     #
     #         print("* %s bp insertion '%s' at breakpoint\n") % (insertion_size, inserted_seq)
     #
-    #     if insertion_size >= 3:
-    #         (inserted_start, inserted_end, upstream_start, upstream_end, aligned) = longestMatch(inserted_seq,upstream_seq)
-    #         if len(aligned) > 3:
-    #             splitbuffer = " "*upstream_start
-    #             print(" Upstream:      %s--/--") % (upstream_seq)
-    #             print(" Insertion:     %s%s\n") % (splitbuffer, inserted_seq[0:len(aligned)])
-    #             insertion_pos = (len(upstream_seq) - len(aligned))
-    #             print("* %s bp of inserted sequence -%s bps from breakpoint on upstream sequence\n") % (len(aligned),insertion_pos)
-    #
-    #         (downstream_start, downstream_end, inserted_start, inserted_end, aligned) = longestMatch(downstream_seq, inserted_seq)
-    #         if len(aligned) > 3:
-    #             print(downstream_start)
-    #             splitbuffer = " "*(downstream_start+5)
-    #             print(" Downstream:     --/--%s") % (downstream_seq)
-    #             print(" Insertion:      %s%s\n") % (splitbuffer, inserted_seq)
-    #             print("* %s bp of inserted sequence +%s bps from breakpoint on downstream sequence\n") % (len(aligned),downstream_start)
-    #
+        if insertion_size >= 3:
+            (inserted_start, inserted_end, upstream_start, upstream_end, aligned) = longestMatch(inserted_seq,upstream_seq)
+            if len(aligned) > 3:
+                splitbuffer = " "*upstream_start
+                print(" Upstream:      %s--/--") % (upstream_seq)
+                print(" Insertion:     %s%s\n") % (splitbuffer, inserted_seq[0:len(aligned)])
+                insertion_pos = (len(upstream_seq) - len(aligned))
+                print("* %s bp of inserted sequence -%s bps from breakpoint on upstream sequence\n") % (len(aligned),insertion_pos)
+
+            (downstream_start, downstream_end, inserted_start, inserted_end, aligned) = longestMatch(downstream_seq, inserted_seq)
+            if len(aligned) > 3:
+                print(downstream_start)
+                splitbuffer = " "*(downstream_start+5)
+                print(" Downstream:     --/--%s") % (downstream_seq)
+                print(" Insertion:      %s%s\n") % (splitbuffer, inserted_seq)
+                print("* %s bp of inserted sequence +%s bps from breakpoint on downstream sequence\n") % (len(aligned),downstream_start)
+
+    return(longest_hom, mhseq, homseq, deletion_size, deleted_bases, insertion_size, inserted_seq)
+
      # else:
      #     print("No split read sequence provided. Unable to find insetion at bp")
      #     insertion_size = 0
