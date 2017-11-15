@@ -54,7 +54,7 @@ class MicroHomTestCase(unittest.TestCase):
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
         """
 
-        (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCATCCCAAGGG', '', 1,0)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCATCCCAAGGG', '', 1,0)
         self.assertTrue(delsize == 0)
 
 
@@ -65,7 +65,7 @@ class MicroHomTestCase(unittest.TestCase):
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
 
         """
-        (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCAAGGGTTTTT', '', 1,1)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCAAGGGTTTTT', '', 1,1)
         self.assertEqual(longest_hom, 5)
         self.assertTrue(mhseq == 'CCCAA')
         self.assertFalse(mhseq == 'CACAG')
@@ -79,13 +79,35 @@ class MicroHomTestCase(unittest.TestCase):
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
 
         """
-        (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCAAGGGTTTTT', '', 1,1)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCAAGGGTTTTT', '', 1,1)
         self.assertTrue(delsize == 0)
 
-        (longest_hom, mhseq, homseq, delsize, delbases) = run_script('', '', 'TTTTTCCCGGGTTTTT', '', 1,1)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCGGGTTTTT', '', 1,1)
         self.assertTrue(delsize == 2)
         self.assertTrue(delbases == 'AA')
 
+    def test_microhomology_insertion(self):
+        """Does script() successfully report matches in these sequences?
+
+        upstream_seq   = 'GGGAATTTTTTTTTTCCCAA'
+        downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
+        split_read = 'TTTTTCCCAATAGCATCCCAAGGGTTTTT'
+
+        correct configuration:
+        GGGAATTTTTTTTTTCCCAA
+                  TTTTTCCCAA---[TAGCAT]---CCCAAGGGTTTTT
+                                          CCCAAGGGTTTTTTTTTTGG
+                       ^^^^^              ^^^^^
+        6 bp insertion (TAGCAT)
+        """
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCAATAGCATCCCAAGGGTTTTT', '', 1,1)
+        self.assertTrue(insize == 6)
+        self.assertTrue(inseq == 'TAGCAT')
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCAATACCCAAGGGTTTTT', '', 1,1)
+        self.assertTrue(insize == 2)
+        self.assertTrue(inseq == 'TA')
 
 
 
