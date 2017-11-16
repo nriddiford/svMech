@@ -431,7 +431,7 @@ def run_script(pos, n, split_read, genome, test, testmh):
                 splitbuffer = " "*upstream_start
                 print(" Upstream:      %s--/--") % (upstream_seq)
                 print(" Insertion:     %s%s\n") % (splitbuffer, inserted_seq[0:len(aligned)])
-                insertion_pos = (len(upstream_seq) - len(aligned))
+                insertion_pos = (len(upstream_seq) - upstream_start)
                 print("* %s bp of inserted sequence -%s bps from breakpoint on upstream sequence\n") % (len(aligned),insertion_pos)
 
             (downstream_start, downstream_end, inserted_start, inserted_end, aligned) = longestMatch(downstream_seq, inserted_seq)
