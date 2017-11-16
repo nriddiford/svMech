@@ -207,6 +207,14 @@ def run_script(pos, n, split_read, genome, test, testmh):
         # Align split read to upstream seq (normal orientation)
         (upstream_start, upstream_end, split_start_up, split_end_up, upseq) = longestMatch(upstream_seq, split_read)
 
+        print(upstream_start, upstream_end, split_start_up, split_end_up, upseq)
+
+        ### Needs work. Currently, different output produced using consensus (longer than split). Should trom split reads if this is the case...
+        if  upstream_start < split_start_up:
+            print("here!!")
+
+        ####
+
         aligned_up = len(upseq)
         deletion_size= len(upstream_seq[upstream_end:])
 
