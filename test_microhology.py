@@ -69,8 +69,8 @@ class MicroHomTestCase(unittest.TestCase):
         self.assertEqual(longest_hom, 5)
         self.assertTrue(mhseq == 'CCCAA')
         self.assertFalse(mhseq == 'CACAG')
-        self.assertTrue(homseq == 'GTTTTTTTTTTC')
-        self.assertEqual(len(homseq), 12)
+        self.assertTrue(homseq == 'GTTTTTTTTTT')
+        self.assertEqual(len(homseq), 11)
 
     def test_microhomology_deletion(self):
         """Does script() successfully report matches in these sequences?
@@ -113,8 +113,8 @@ class MicroHomTestCase(unittest.TestCase):
     def test_microhomology_templated_insertion(self):
         """Does script() successfully report that there is a templated insertion in these split reads?
 
-        upstream_seq   = 'GGGAATTAGCATTTTTTTTTCCCAA'
-        downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
+        upstream_seq   = 'GGGAATAGTTTTTTTTTTCCCAA'
+        downstream_seq = 'CCCAAGGGTTTTTTTTTTGGCAT'
         split_read = 'TTTTTCCCAATAGCATCCCAAGGGTTTTT'
 
         correct configuration:
@@ -127,7 +127,7 @@ class MicroHomTestCase(unittest.TestCase):
 
         (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', 'TTTTTCCCAATAGCATCCCAAGGGTTTTT', '', 1,1)
         self.assertTrue(tempup == 'TAG')
-        self.assertTrue(tempdown == 'CAT')
+        self.assertTrue(tempdown == 'GCAT')
 
 
 

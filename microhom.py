@@ -85,6 +85,7 @@ def longestMatch(seq1, seq2):
     seq2_end = match[1]+match[2]
     # print("Seq1:%s") % (seq1)
     # print("Seq2:%s") % (seq2)
+    # print(seq1_start, seq1_end, seq2_start, seq2_end, seq)
     return(seq1_start, seq1_end, seq2_start, seq2_end, seq)
 
 def run_script(pos, n, split_read, genome, test, testmh):
@@ -93,8 +94,8 @@ def run_script(pos, n, split_read, genome, test, testmh):
 
         # bp1 -= 1
         bp2 -= 1
-        upstream = bp1 - 100
-        downstream = bp2 + 100
+        upstream = bp1 - 125
+        downstream = bp2 + 125
 
         upstream_seq = genome.fetch(chrom1, upstream, bp1)
         downstream_seq = genome.fetch(chrom1, bp2, downstream)
@@ -104,7 +105,7 @@ def run_script(pos, n, split_read, genome, test, testmh):
         if testmh:
             print("Running in test mode with simulated microhomology")
             upstream_seq   = 'GGGAATAGTTTTTTTTTTCCCAA'
-            downstream_seq = 'CCCAAGGGTTTTTTTTTTCATGG'
+            downstream_seq = 'CCCAAGGGTTTTTTTTTTGGCAT'
             # split_read = 'TTTTTCCCAATACCCAAGGGTTTTT'
         else:
             print("Running in test mode with no simulated microhomolgy")
@@ -117,8 +118,8 @@ def run_script(pos, n, split_read, genome, test, testmh):
     ## Microhomology ##
     ##################
 
-    print("Upstream:   %s") % (upstream_seq)
-    print("Downstream: %s") % (downstream_seq)
+    print("Upstream:   %s") % (upstream_seq[-50:])
+    print("Downstream: %s") % (downstream_seq[:50])
 
     if microhomology(upstream_seq, downstream_seq):
         (position, longest_hom, mhseq) =  microhomology(upstream_seq, downstream_seq)
@@ -128,15 +129,15 @@ def run_script(pos, n, split_read, genome, test, testmh):
     if longest_hom > 0:
         print("")
         print("* Microhomology at breakpoint: %s (%s bp)") % (mhseq, longest_hom)
-        downstream_spacer = (len(upstream_seq) - len(mhseq))
+        downstream_spacer = (len(upstream_seq[-50:]) - len(mhseq))
         dmarker = " "*(downstream_spacer) + "^"*len(mhseq)
         downstream_buff = " "*downstream_spacer
 
         # upstream_base_end = bp1 - len(mhseq)
         # downstream_base_end = bp2 + len(mhseq)
         marker = "^"*len(mhseq)
-        print(" Upstream:      %s") % (upstream_seq)
-        print(" Downstream:    %s%s") % (downstream_buff, downstream_seq)
+        print(" Upstream:      %s") % (upstream_seq[-50:])
+        print(" Downstream:    %s%s") % (downstream_buff, downstream_seq[:50])
         print(" Microhomology: %s\n") % (dmarker)
 
     else:
@@ -218,7 +219,6 @@ def run_script(pos, n, split_read, genome, test, testmh):
 
         # Split read length - aligned portion = insetion size
         insertion_size = int(split_len - aligned_up - aligned_down)
-
         # microhomolgy?
         if longest_hom > 0:
 
@@ -259,8 +259,6 @@ def run_script(pos, n, split_read, genome, test, testmh):
                 # microhomology with insetion
                 if insertion_size > 0:
                     (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read[split_end_up:])
-
-
                     inserted_seq = split_read[split_end_up:split_end_up+insertion_size]
                     print("* %s bp insertion '%s' at breakpoint\n") % (insertion_size, inserted_seq)
 
@@ -272,7 +270,8 @@ def run_script(pos, n, split_read, genome, test, testmh):
                     print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq)
                 # microhomology with no insetion and no deletion
                 else:
-                    (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read)
+
+                    (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read[split_end_up:])
                     difference = (downstream_start-split_start)
 
                     seqbuffer = " "*(5+len(split_read[0:split_end_up]))
@@ -288,7 +287,6 @@ def run_script(pos, n, split_read, genome, test, testmh):
                 deleted_bases = upstream_seq[-deletion_size:]
                 deletion_fill = "."*(deletion_size)
                 print("deletion of %s bases (%s)" % (deletion_size, upstream_seq[-deletion_size:]))
-
 
                 print(" Upstream:      %s") % (upstream_seq[upstream_start:])
                 print(" Split read:    %s%s--/--%s\n") % (split_read[split_start_up:split_end_up], deletion_fill, split_read[split_end_up:len(split_read)])
