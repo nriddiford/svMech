@@ -54,7 +54,7 @@ class MicroHomTestCase(unittest.TestCase):
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
         """
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCATCCCAAGGG', '', 1,0)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', 'TTTTTCCCATCCCAAGGG', '', 1,0)
         self.assertTrue(delsize == 0)
 
 
@@ -65,12 +65,12 @@ class MicroHomTestCase(unittest.TestCase):
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
 
         """
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCAAGGGTTTTT', '', 1,1)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', 'TTTTTCCCAAGGGTTTTT', '', 1,1)
         self.assertEqual(longest_hom, 5)
         self.assertTrue(mhseq == 'CCCAA')
         self.assertFalse(mhseq == 'CACAG')
-        self.assertTrue(homseq == 'TTTTTTTTTT')
-        self.assertEqual(len(homseq), 10)
+        self.assertTrue(homseq == 'GTTTTTTTTTTC')
+        self.assertEqual(len(homseq), 12)
 
     def test_microhomology_deletion(self):
         """Does script() successfully report matches in these sequences?
@@ -79,10 +79,10 @@ class MicroHomTestCase(unittest.TestCase):
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
 
         """
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCAAGGGTTTTT', '', 1,1)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', 'TTTTTCCCAAGGGTTTTT', '', 1,1)
         self.assertTrue(delsize == 0)
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCGGGTTTTT', '', 1,1)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', 'TTTTTCCCGGGTTTTT', '', 1,1)
         self.assertTrue(delsize == 2)
         self.assertTrue(delbases == 'AA')
 
@@ -101,13 +101,33 @@ class MicroHomTestCase(unittest.TestCase):
         6 bp insertion (TAGCAT)
         """
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCAATAGCATCCCAAGGGTTTTT', '', 1,1)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', 'TTTTTCCCAATAGCATCCCAAGGGTTTTT', '', 1,1)
         self.assertTrue(insize == 6)
         self.assertTrue(inseq == 'TAGCAT')
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq) = run_script('', '', 'TTTTTCCCAATACCCAAGGGTTTTT', '', 1,1)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', 'TTTTTCCCAATACCCAAGGGTTTTT', '', 1,1)
         self.assertTrue(insize == 2)
         self.assertTrue(inseq == 'TA')
+
+
+    def test_microhomology_templated_insertion(self):
+        """Does script() successfully report that there is a templated insertion in these split reads?
+
+        upstream_seq   = 'GGGAATTAGCATTTTTTTTTCCCAA'
+        downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
+        split_read = 'TTTTTCCCAATAGCATCCCAAGGGTTTTT'
+
+        correct configuration:
+        GGGAATTTTTTTTTTCCCAA
+                  TTTTTCCCAA---[TAGCAT]---CCCAAGGGTTTTT
+                                          CCCAAGGGTTTTTTTTTTGG
+                       ^^^^^              ^^^^^
+        6 bp insertion (TAGCAT)
+        """
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', 'TTTTTCCCAATAGCATCCCAAGGGTTTTT', '', 1,1)
+        self.assertTrue(tempup == 'TAG')
+        self.assertTrue(tempdown == 'CAT')
 
 
 

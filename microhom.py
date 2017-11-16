@@ -103,8 +103,8 @@ def run_script(pos, n, split_read, genome, test, testmh):
         # with mh
         if testmh:
             print("Running in test mode with simulated microhomology")
-            upstream_seq   = 'GGGAATTTTTTTTTTCCCAA'
-            downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
+            upstream_seq   = 'GGGAATAGTTTTTTTTTTCCCAA'
+            downstream_seq = 'CCCAAGGGTTTTTTTTTTCATGG'
             # split_read = 'TTTTTCCCAATACCCAAGGGTTTTT'
         else:
             print("Running in test mode with no simulated microhomolgy")
@@ -425,28 +425,31 @@ def run_script(pos, n, split_read, genome, test, testmh):
     #
     #         print("* %s bp insertion '%s' at breakpoint\n") % (insertion_size, inserted_seq)
     #
+        templated_up = ''
+        templated_down = ''
         if insertion_size >= 3:
             (inserted_start, inserted_end, upstream_start, upstream_end, aligned) = longestMatch(inserted_seq,upstream_seq[-n:])
             if len(aligned) >= 3:
+                templated_up = aligned
                 splitbuffer = " "*upstream_start
                 print(" Upstream:      %s--/--") % (upstream_seq[-n:])
-                print(" Insertion:     %s%s\n") % (splitbuffer, aligned)
+                print(" Insertion:     %s%s\n") % (splitbuffer, templated_up)
                 insertion_pos = (len(upstream_seq[-n:]) - upstream_start)
-                print("* %s bp of inserted sequence -%s bps from breakpoint on upstream sequence\n") % (len(aligned),insertion_pos)
+                print("* %s bp of inserted sequence -%s bps from breakpoint on upstream sequence\n") % (len(templated_up),insertion_pos)
             else:
                 print("Could not find at least 3 bases of inserted sequence in upstream region")
             (downstream_start, downstream_end, inserted_start, inserted_end, aligned) = longestMatch(downstream_seq[:n], inserted_seq)
-            print(aligned)
 
             if len(aligned) >= 3:
+                templated_down = aligned
                 splitbuffer = " "*(downstream_start+5)
                 print(" Downstream:     --/--%s") % (downstream_seq[:n])
-                print(" Insertion:      %s%s\n") % (splitbuffer, aligned)
-                print("* %s bp of inserted sequence +%s bps from breakpoint on downstream sequence\n") % (len(aligned),downstream_seq[:n])
+                print(" Insertion:      %s%s\n") % (splitbuffer, templated_down)
+                print("* %s bp of inserted sequence +%s bps from breakpoint on downstream sequence\n") % (len(templated_down),downstream_start)
             else:
                 print("Could not find at least 3 bases of inserted sequence in downstream region")
 
-    return(longest_hom, mhseq, homseq, deletion_size, deleted_bases, insertion_size, inserted_seq)
+    return(longest_hom, mhseq, homseq, deletion_size, deleted_bases, insertion_size, inserted_seq, templated_up, templated_down)
 
      # else:
      #     print("No split read sequence provided. Unable to find insetion at bp")
