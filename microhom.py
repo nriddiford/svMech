@@ -11,11 +11,9 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', action="store", help="Breakpoint position (chr:bp1-bp2) [Required]", dest='location', required=True)
+    parser.add_argument('-p', action="store", help="Breakpoint position (chr:bp1-bp2) [Required]", dest='location')
     parser.add_argument('-s', action="store", help="Split read sequence for detection of insertions", dest="split")
     parser.add_argument('-n', action="store", help="Number of bases to look for extended homology. [Default: 200 if microhomology found, 10 if not]", dest='homspace',type=int)
-    # parser.add_argument('-t', action="store_true", help="Run in test mode [Overides -p & -s values]", dest='test')
-    # parser.add_argument('-tm', action="store_true", help="Run in test mode with microhomolgy", dest='testmh')
     parser.add_argument('-up', action="store", help="Upstream sequence", dest="upseq")
     parser.add_argument('-down', action="store", help="Upstream sequence", dest="downseq")
 
@@ -23,20 +21,10 @@ def main():
     pos = args.location
     split_read = args.split
     n=args.homspace
-    # test=args.test
-    # testmh=args.testmh
     upstream_seq = args.upseq
     downstream_seq = args.downseq
 
     genome = pysam.Fastafile("/Users/Nick_curie/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
-
-
-    # if test:
-    #     upstream_seq   = 'GGGAATTTTTTTTTTCCCAT'
-    #     downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
-    # if testmh:
-    #     upstream_seq   = 'GGGAATAGTTTTTTTTTTCCCAA'
-    #     downstream_seq = 'CCCAAGGGTTTTTTTTTTGGCAT'
 
     run_script(pos, n, split_read, genome, upstream_seq, downstream_seq)
 
@@ -114,19 +102,6 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq):
         upstream_seq = genome.fetch(chrom1, upstream, bp1)
         downstream_seq = genome.fetch(chrom1, bp2, downstream)
         # upstream_seq = reversed_seq(upstream_n)
-    # else:
-    #     # with mh
-    #     if testmh:
-    #         print("Running in test mode with simulated microhomology")
-    #         upstream_seq   = 'GGGAATAGTTTTTTTTTTCCCAA'
-    #         downstream_seq = 'CCCAAGGGTTTTTTTTTTGGCAT'
-    #         # split_read = 'TTTTTCCCAATACCCAAGGGTTTTT'
-    #     else:
-    #         print("Running in test mode with no simulated microhomolgy")
-    #         upstream_seq   = 'GGGAATTTTTTTTTTCCCAT'
-    #         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
-        #split_read = 'TTTTTCCCAAGGGAATTTTT'
-        # split_read = reversed_seq(split_read)
 
     ##################
     ## Microhomology ##
@@ -222,8 +197,6 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq):
         # Align split read to upstream seq (normal orientation)
         (upstream_start, upstream_end, split_start_up, split_end_up, upseq) = longestMatch(upstream_seq, split_read)
 
-        print(upstream_start, upstream_end, split_start_up, split_end_up, upseq)
-
         ### Needs work. Currently, different output produced using consensus (longer than split). Should trom split reads if this is the case...
         if  upstream_start < split_start_up:
             print("here!!")
@@ -231,11 +204,13 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq):
         ####
 
         aligned_up = len(upseq)
-        deletion_size= len(upstream_seq[upstream_end:])
+        deletion_size = len(upstream_seq[upstream_end:])
+        deltype = 'up'
+
 
         (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read[split_end_up:])
 
-        print(downstream_start, downstream_end, split_start, split_end, downseq)
+
         # Calculate length of aligned sequences
         split_len = len(split_read)
         aligned_up = len(upseq)
@@ -245,7 +220,6 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq):
         # insertion_size = int(split_len - aligned_up - aligned_down)
 
         insertion_size = split_start
-        print("Insertion size == %s") % (insertion_size)
 
         #######################
         #### Microhomology ####
@@ -257,7 +231,11 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq):
             if deletion_size > 0:
                 print("Deletion in microhomolgy region")
 
-                deleted_bases = upstream_seq[-deletion_size:]
+                if deltype == 'up':
+                    deleted_bases = upstream_seq[-deletion_size:]
+                else:
+                    deleted_bases = downstream_seq[:deletion_size]
+
                 deletion_fill = "."*(deletion_size)
                 print("deletion of %s bases (%s)" % (deletion_size, upstream_seq[-deletion_size:]))
 
@@ -316,23 +294,45 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq):
         ##########################
 
         else:
+
+            if deletion_size == 0:
+                deletion_size = downstream_start
+                deltype = 'down'
+
             # Deletion without microhomology
             if deletion_size > 0:
-                print("Deletion with no microhomolgy")
-                deleted_bases = upstream_seq[-deletion_size:]
+                if deltype == 'up':
+                    deleted_bases = upstream_seq[-deletion_size:]
+                else:
+                    deleted_bases = downstream_seq[:deletion_size]
+
+                # deleted_bases = upstream_seq[-deletion_size:]
                 deletion_fill = "."*(deletion_size)
-                print("deletion of %s bases (%s)" % (deletion_size, upstream_seq[-deletion_size:]))
+                print("* Deletion of %s bases (%s)" % (deletion_size, deleted_bases))
 
-                print(" Upstream:      %s") % (upstream_seq[upstream_start:])
-                print(" Split read:    %s%s--/--%s\n") % (split_read[split_start_up:split_end_up], deletion_fill, split_read[split_end_up:len(split_read)])
+                if deltype == 'up':
+                    print(" Upstream:      %s") % (upstream_seq[upstream_start:])
+                    print(" Split read:    %s%s--/--%s\n") % (split_read[split_start_up:split_end_up], deletion_fill, split_read[split_end_up:len(split_read)])
 
-                (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read)
+                    (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read)
 
-                difference = (split_start - downstream_start)
-                seqbuffer = " "*(5+len(split_read[0:split_end_up]))
+                    difference = (split_start - downstream_start)
+                    seqbuffer = " "*(5+len(split_read[0:split_end_up]))
 
-                print(" Split read:    %s--/--%s") % (split_read[0:split_end_up], split_read[split_start:])
-                print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[0:downstream_end])
+                    print(" Split read:    %s--/--%s") % (split_read[0:split_end_up], split_read[split_start:])
+                    print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[0:downstream_end])
+                else:
+                    print(" Upstream:      %s") % (upstream_seq[upstream_start:])
+                    print(" Split read:    %s--/--%s\n") % (split_read[split_start_up:split_end_up], split_read[split_end_up:len(split_read)])
+
+                    (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read)
+
+                    difference = (split_start - downstream_start)
+                    seqbuffer = " "*(5+len(split_read[0:split_end_up]))
+
+                    print(" Split read:    %s--/--%s%s") % (split_read[0:split_end_up], deletion_fill,split_read[split_start:])
+                    print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[0:downstream_end])
+
 
                 # print(split_read[split_end-add2split:split_end])
                 # print(split_end_up, longest_hom, deletion_size)
@@ -363,7 +363,7 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq):
                 print(" Split read:    %s--/--[%s]--%s%s") % (split_read[:split_end_up], split_read[split_end_up:split_end_up+insertion_size],add2split, split_read[split_end_up+insertion_size:])
                 print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[:downstream_end])
 
-            else:
+            if insertion_size == 0 and deletion_size == 0:
                 print("\n* No microhomolgy found, and no deletion or insertion at breakpoint")
 
                 print(" Upstream:      %s") % (upstream_seq[upstream_start:])

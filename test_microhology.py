@@ -8,7 +8,7 @@ from microhom import (
 )
 
 class MicroHomTestCase(unittest.TestCase):
-    # microhomology()
+
     def test_is_microhomology(self):
         """ Is microhomology successfully detected? """
         (position, longest_hom, mhseq) =  microhomology('GGGGGTTTTTTTTTTCCCAA', 'CCCAATTTTTTTTTTGGGGG')
@@ -17,15 +17,27 @@ class MicroHomTestCase(unittest.TestCase):
         (position, longest_hom, mhseq) =  microhomology('GGGGGTTTTTTTTTTACCCC', 'CCCCATTTTTTTTTTGGGGG')
         self.assertTrue(longest_hom == 4)
 
-    def test_is_no_microhomology(self):
-        """ Is lack of microhomology successfully reported? """
-        (position, longest_hom, mhseq) =  microhomology('GGGGGTTTTTTTTTTCCCGG', 'CCCAATTTTTTTTTTGGGGG')
-        self.assertTrue(longest_hom == 0)
-
     def test_reversed_seq(self):
         """ Are these sequences correctly reversed? """
         self.assertEqual(reversed_seq('ATGC'), 'CGTA')
         self.assertEqual(reversed_seq('AAAA'), 'AAAA')
+
+    def test_microhomology_no_deletion(self):
+        """Is the microhomology correctly reported in the sequences? """
+
+        upstream_seq   = 'GGGAATTTTTTTTTTCCCAA'
+        downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
+        split_read     = 'TTTTTCCCAAGGGTTTTT'
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        self.assertEqual(longest_hom, 5)
+        self.assertTrue(mhseq == 'CCCAA')
+        self.assertFalse(mhseq == 'CACAG')
+        self.assertTrue(homseq == 'TTTTTTTTTT')
+        self.assertTrue(len(homseq) == 10)
+
+
+class HomTestCase(unittest.TestCase):
 
     # Tests for longestMatch
     def test_homology(self):
@@ -44,6 +56,12 @@ class MicroHomTestCase(unittest.TestCase):
         (downstream_start, downstream_end, upstream_start, upstream_end, homseq) = longestMatch(seq1,seq2)
         self.assertEqual(len(homseq), 0)
 
+class NoMicroHomTestCase(unittest.TestCase):
+
+    def test_is_no_microhomology(self):
+        """ Is lack of microhomology successfully reported? """
+        (position, longest_hom, mhseq) =  microhomology('GGGGGTTTTTTTTTTCCCGG', 'CCCAATTTTTTTTTTGGGGG')
+        self.assertTrue(longest_hom == 0)
 
     def test_no_hom_no_del_no_ins(self):
         """ Are these perfect matches with no mh reported correctly? """
@@ -68,22 +86,10 @@ class MicroHomTestCase(unittest.TestCase):
         self.assertTrue(insize == 0)
 
 
-    def test_microhomology_no_deletion(self):
-        """Is the microhomology correctly reported in the sequences? """
-
-        upstream_seq   = 'GGGAATTTTTTTTTTCCCAA'
-        downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
-        split_read     = 'TTTTTCCCAAGGGTTTTT'
-
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
-        self.assertEqual(longest_hom, 5)
-        self.assertTrue(mhseq == 'CCCAA')
-        self.assertFalse(mhseq == 'CACAG')
-        self.assertTrue(homseq == 'TTTTTTTTTT')
-        self.assertTrue(len(homseq) == 10)
+class DeletionTestCase(unittest.TestCase):
 
     def test_microhomology_deletion(self):
-        """Is the deletion with microhomology correctly reported in the sequences? """
+        """Is the deletion with microhomology correctly reported in these sequences? """
 
         upstream_seq   = 'GGGAATTTTTTTTTTCCCAA'
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
@@ -97,6 +103,28 @@ class MicroHomTestCase(unittest.TestCase):
         (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
         self.assertTrue(delsize == 2)
         self.assertTrue(delbases == 'AA')
+
+    def test_no_microhomology_deletion(self):
+        """Is the deletion with no microhomology correctly reported in these sequences? """
+
+        upstream_seq   = 'AAAATTTT'
+        downstream_seq = 'GGGGCCCC'
+        split_read     = 'AAAATTTTGGCCCC'
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        self.assertTrue(delsize == 2)
+        self.assertTrue(delbases == 'GG')
+
+        upstream_seq   = 'ATATGGCC'
+        downstream_seq = 'GCATCCCTTT'
+        split_read     = 'ATATGGGCATCCCTTT'
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        self.assertTrue(delsize == 2)
+        self.assertTrue(delbases == 'CC')
+
+
+class InsertionTestCase(unittest.TestCase):
 
     def test_microhomology_insertion(self):
         """Is the insertion with microhomology correctly reported in the sequences?
@@ -126,6 +154,13 @@ class MicroHomTestCase(unittest.TestCase):
         self.assertTrue(insize == 2)
         self.assertTrue(inseq == 'TA')
 
+        upstream_seq   = 'GGGAATTTTTTAATG'
+        downstream_seq = 'ATGGGGTTTTTTGG'
+        split_read = 'TTTTAATGCCCATGGGGTT'
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        self.assertTrue(insize == 3)
+        self.assertTrue(inseq == 'CCC')
 
     def test_microhomology_templated_insertion1(self):
         """Are the templated insertions in these split reads correctly reported?
@@ -173,23 +208,16 @@ class MicroHomTestCase(unittest.TestCase):
         self.assertTrue(tempdown == 'CATGA')
         self.assertTrue(insize == 21)
 
-
-
-    def test_no_microhomology_deletion(self):
-        """Does script() successfully report matches in these sequences?"""
-
-        upstream_seq   = 'GGGAATTTTTTTTTTCCCAA'
-        downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
-        split_read     = 'TTTTTCCCAAGGGTTTTT'
+    def test_microhomology_templated_insertion5(self):
+        upstream_seq   = 'GGGAATAGTTTTTTTTTTATGCC'
+        downstream_seq = 'ATGCCGGGTTTTTTTTTTGGCAT'
+        split_read = 'TTTTTATGCCTTTGGATGCCGGGT'
 
         (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
-        self.assertTrue(delsize == 0)
+        self.assertTrue(inseq == 'TTTGG')
+        self.assertTrue(tempdown == 'TTTGG')
+        self.assertTrue(insize == 5)
 
-        split_read     = 'TTTTTCCCGGGTTTTT'
-
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
-        self.assertTrue(delsize == 2)
-        self.assertTrue(delbases == 'AA')
 
 
 
