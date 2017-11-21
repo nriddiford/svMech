@@ -1,3 +1,5 @@
 {
-  "test_microhology.py::MicroHomTestCase::test_deletions": true
+  "test_microhology.py::InsertionTestCase::test_microhomology_templated_insertion5": true, 
+  "test_microhology.py::MicroHomTestCase::test_deletions": true, 
+  "test_microhology.py::MicroHomTestCase::test_reversed_seq": true
 }

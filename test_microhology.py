@@ -17,11 +17,6 @@ class MicroHomTestCase(unittest.TestCase):
         (position, longest_hom, mhseq) =  microhomology('GGGGGTTTTTTTTTTACCCC', 'CCCCATTTTTTTTTTGGGGG')
         self.assertTrue(longest_hom == 4)
 
-    def test_reversed_seq(self):
-        """ Are these sequences correctly reversed? """
-        self.assertEqual(reversed_seq('ATGC'), 'CGTA')
-        self.assertEqual(reversed_seq('AAAA'), 'AAAA')
-
     def test_microhomology_no_deletion(self):
         """Is the microhomology correctly reported in the sequences? """
 
@@ -29,7 +24,7 @@ class MicroHomTestCase(unittest.TestCase):
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
         split_read     = 'TTTTTCCCAAGGGTTTTT'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertEqual(longest_hom, 5)
         self.assertTrue(mhseq == 'CCCAA')
         self.assertFalse(mhseq == 'CACAG')
@@ -73,7 +68,7 @@ class NoMicroHomTestCase(unittest.TestCase):
         downstream_seq = 'CCCCCCC'
         split_read     = 'TTTTTTTCCCCCCC'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(delsize == 0)
         self.assertTrue(insize == 0)
 
@@ -81,7 +76,7 @@ class NoMicroHomTestCase(unittest.TestCase):
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
         split_read     = 'TTTTTCCCATCCCAAGGG'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(delsize == 0)
         self.assertTrue(insize == 0)
 
@@ -95,12 +90,12 @@ class DeletionTestCase(unittest.TestCase):
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
         split_read     = 'TTTTTCCCAAGGGTTTTT'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(delsize == 0)
 
         split_read     = 'TTTTTCCCGGGTTTTT'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(delsize == 2)
         self.assertTrue(delbases == 'AA')
 
@@ -111,7 +106,7 @@ class DeletionTestCase(unittest.TestCase):
         downstream_seq = 'GGGGCCCC'
         split_read     = 'AAAATTTTGGCCCC'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(delsize == 2)
         self.assertTrue(delbases == 'GG')
 
@@ -119,7 +114,7 @@ class DeletionTestCase(unittest.TestCase):
         downstream_seq = 'GCATCCCTTT'
         split_read     = 'ATATGGGCATCCCTTT'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(delsize == 2)
         self.assertTrue(delbases == 'CC')
 
@@ -145,12 +140,12 @@ class InsertionTestCase(unittest.TestCase):
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGG'
         split_read = 'TTTTTCCCAATAGCATCCCAAGGGTTTTT'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(insize == 6)
         self.assertTrue(inseq == 'TAGCAT')
 
         split_read = 'TTTTTCCCAATACCCAAGGGTTTTT'
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(insize == 2)
         self.assertTrue(inseq == 'TA')
 
@@ -158,7 +153,7 @@ class InsertionTestCase(unittest.TestCase):
         downstream_seq = 'ATGGGGTTTTTTGG'
         split_read = 'TTTTAATGCCCATGGGGTT'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(insize == 3)
         self.assertTrue(inseq == 'CCC')
 
@@ -181,7 +176,7 @@ class InsertionTestCase(unittest.TestCase):
         downstream_seq = 'CCCAAGGGTTTTTTTTTTGGCAT'
         split_read = 'TTTTTCCCAATAGCATCCCAAGGGTTTTT'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(tempup == 'TAG')
         self.assertTrue(tempdown == 'GCAT')
 
@@ -191,7 +186,7 @@ class InsertionTestCase(unittest.TestCase):
         downstream_seq = 'AAAAAGTCCC'
         split_read     = 'GATCCCCCGGATCAAAAAGTCCC'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(tempup == 'GATC')
         self.assertTrue(insize == 4)
 
@@ -202,23 +197,83 @@ class InsertionTestCase(unittest.TestCase):
         split_read     = 'ACCATTTACCCTATTGATTTGCTGTTCTTATTGTTATATCATTTTATATCATTGTTTCATGATGGATTACATGAAGTGCAGACTTCTCTTAAAAAAAAAAC'
 
         """ insertion of TATATCATTGTTTCATGATGG """
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(inseq == 'TATATCATTGTTTCATGATGG')
         self.assertTrue(tempup == 'TATATCATT')
         self.assertTrue(tempdown == 'CATGA')
         self.assertTrue(insize == 21)
 
-    def test_microhomology_templated_insertion5(self):
+    def test_microhomology_templated_insertion4(self):
         upstream_seq   = 'GGGAATAGTTTTTTTTTTATGCC'
         downstream_seq = 'ATGCCGGGTTTTTTTTTTGGCAT'
         split_read = 'TTTTTATGCCTTTGGATGCCGGGT'
 
-        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown) = run_script('', '', split_read, '', upstream_seq, downstream_seq)
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FF')
         self.assertTrue(inseq == 'TTTGG')
         self.assertTrue(tempdown == 'TTTGG')
         self.assertTrue(insize == 5)
 
+class Inversion_FR(unittest.TestCase):
+    def test_microhomology_inversion(self):
+        """These reads are aligned FR - are they correctly aligned? """
 
+        upstream_seq   = 'TAGCCA'
+        downstream_seq = 'ACCGTCC'
+        split_read     = 'TAGCCAGGACGGT'
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FR')
+        self.assertEqual(longest_hom, 1)
+        self.assertTrue(mhseq == 'A')
+
+    def test_reversed_seq(self):
+        """ Are these sequences correctly reversed? """
+        self.assertEqual(reversed_seq('AGGACGGT'), 'ACCGTCCT')
+
+
+    def test_no_microhomology_inversion(self):
+        """These reads are aligned FR - are they correctly aligned? """
+
+        upstream_seq   = 'TAGCCC'
+        downstream_seq = 'ACCGTCC'
+        split_read     = 'TAGCCCGGACGGT'
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FR')
+        self.assertEqual(longest_hom, 0)
+        self.assertFalse(mhseq == 'A')
+
+
+class Inversion_FR_Del(unittest.TestCase):
+    def test_microhomology_inversion_del(self):
+        """These reads are aligned FR, and have a deletion at the breakpoint. Are they correctly aligned? """
+
+        upstream_seq   = 'TAGCCA'
+        downstream_seq = 'ACCGTCC'
+        split_read     = 'TAGCCAGGACG'
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FR')
+        self.assertEqual(delsize, 1)
+        self.assertTrue(mhseq == 'A')
+
+
+        upstream_seq   = 'GACCGCTCTCCATTGGGCAGCGGCGGTTAACAATACCGAAGCGGTGAACA'
+        downstream_seq = 'AAAAAAAAAAAAAGCGGAGAACAAACTCCCGGGCCCTGTGCACTTAATTT'
+        split_read     = 'TTAACAATACCGAAGCGGTGAACATGTTCTCCGCTTTTTTTTTTTTT'
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FR')
+        self.assertTrue(delsize == 0)
+        self.assertTrue(mhseq == 'A')
+
+class Inversion_FR_Ins(unittest.TestCase):
+    def test_microhomology_inversion_del(self):
+        """These reads are aligned FR, and have an insertion at the breakpoint. Are they correctly aligned? """
+
+        upstream_seq   = 'TAGCCA'
+        downstream_seq = 'ACCGTCC'
+        split_read     = 'TAGCCAGGACGGTTCCAC'
+
+        (longest_hom, mhseq, homseq, delsize, delbases, insize, inseq, tempup, tempdown, templen) = run_script('', '', split_read, '', upstream_seq, downstream_seq, 'FR')
+        self.assertEqual(insize, 5)
+        self.assertTrue(inseq == 'GTGGA')
 
 
 if __name__ == '__main__':
