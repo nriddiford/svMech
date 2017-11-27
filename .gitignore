@@ -3,3 +3,5 @@ tests/microhom.
 tests/.cache
 __pycache__/
 microhom.pyc
+data/*
+.Rhistory
