@@ -4,7 +4,7 @@ from microhom import (
     microhomology,
     longestMatch,
     run_script,
-    reversed_seq
+    reverse_complement
 )
 
 class MicroHomTestCase(unittest.TestCase):
@@ -225,9 +225,9 @@ class Inversion_FR(unittest.TestCase):
         self.assertEqual(longest_hom, 1)
         self.assertTrue(mhseq == 'A')
 
-    def test_reversed_seq(self):
+    def test_reverse_complement(self):
         """ Are these sequences correctly reversed? """
-        self.assertEqual(reversed_seq('AGGACGGT'), 'ACCGTCCT')
+        self.assertEqual(reverse_complement('AGGACGGT'), 'ACCGTCCT')
 
 
     def test_no_microhomology_inversion(self):

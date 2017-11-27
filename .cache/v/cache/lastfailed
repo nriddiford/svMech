@@ -1,5 +1,10 @@
 {
   "test_microhology.py::InsertionTestCase::test_microhomology_templated_insertion5": true, 
+  "test_microhology.py::Inversion_FR::test_microhomology_inversion": true, 
+  "test_microhology.py::Inversion_FR::test_no_microhomology_inversion": true, 
+  "test_microhology.py::Inversion_FR::test_reverse_complement": true, 
+  "test_microhology.py::Inversion_FR_Del::test_microhomology_inversion_del": true, 
+  "test_microhology.py::Inversion_FR_Ins::test_microhomology_inversion_del": true, 
   "test_microhology.py::MicroHomTestCase::test_deletions": true, 
   "test_microhology.py::MicroHomTestCase::test_reversed_seq": true
 }

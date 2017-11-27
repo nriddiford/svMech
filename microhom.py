@@ -18,6 +18,8 @@ def main():
     parser.add_argument('-up', action="store", help="Upstream sequence", dest="upseq")
     parser.add_argument('-down', action="store", help="Upstream sequence", dest="downseq")
     parser.add_argument('-o', action="store", help="Orientation of split read [Default FF. Options FR RF]", dest="ori")
+    parser.add_argument('-c', action="store", help="Amount of upstream/downstream seq to consider [Default full length]", dest="cut")
+
 
     args = parser.parse_args()
     pos = args.location
@@ -26,16 +28,25 @@ def main():
     upstream_seq = args.upseq
     downstream_seq = args.downseq
     ori = args.ori
+    cut = args.cut
+
+
     if ori is None:
         ori = 'FF'
 
-    genome = pysam.Fastafile("/Users/Nick_curie/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
+    if cut is None:
+        cut = 200
 
-    run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori)
+    # genome = pysam.Fastafile("/Users/Nick_curie/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
+    genome = pysam.Fastafile("/Users/Nick/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
 
-def reversed_seq(seq):
-    return seq.translate(maketrans('ACGTacgt', 'TGCAtgca'))[::-1]
+    run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cut)
 
+def reverse_complement(seq):
+    return seq.translate(maketrans('ACGTacgt', 'TGCAtgca'))
+
+def reversed_seq(x):
+    return x[::-1]
 
 def get_parts(lookup):
     (chrom1, bp1, bp2) = re.split(':|-',lookup)
@@ -92,25 +103,41 @@ def longestMatch(seq1, seq2):
     # print(seq1_start, seq1_end, seq2_start, seq2_end, seq)
     return(seq1_start, seq1_end, seq2_start, seq2_end, seq)
 
-def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
+def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cut):
+    cut = int(cut)
     if not upstream_seq:
         (chrom1, bp1, bp2) = get_parts(pos)
 
         # bp1 -= 1
         bp2 -= 1
-        upstream = bp1 - 200
-        downstream = bp2 + 200
+        upstream = bp1 - cut
 
         upstream_seq = genome.fetch(chrom1, upstream, bp1)
-        downstream_seq = genome.fetch(chrom1, bp2, downstream)
-        # upstream_seq = reversed_seq(upstream_n)
+        print("Upstream:   %s") % (upstream_seq[-50:])
+
+        if ori == 'FF':
+            downstream = bp2 + cut
+            downstream_seq = genome.fetch(chrom1, bp2, downstream)
+        else:
+            downstream = bp2 - cut
+            downstream_seq = genome.fetch(chrom1, downstream, bp2)
+            print("Downstream: %s") % (downstream_seq)
+            print("Reversed downstream: %s") % (reversed_seq(downstream_seq))
+            downstream_seq = reversed_seq(downstream_seq)
+        # upstream_seq = reverse_complement(upstream_n)
 
     ##################
     ## Microhomology ##
     ##################
+    if upstream_seq:
+        if ori == 'FF':
+            print("Downstream: %s") % (downstream_seq[:50])
+        else:
+            print("Downstream: %s") % (downstream_seq)
+            print("Reversed downstream: %s") % (reversed_seq(downstream_seq))
+            downstream_seq = reversed_seq(downstream_seq[:50])
 
-    print("Upstream:   %s") % (upstream_seq[-50:])
-    print("Downstream: %s") % (downstream_seq[:50])
+    # print("Downstream: %s") % (downstream_seq[:50])
 
     if microhomology(upstream_seq, downstream_seq):
         (position, longest_hom, mhseq) =  microhomology(upstream_seq, downstream_seq)
@@ -181,7 +208,6 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
     else:
         print("\n* No homology found +/- %s bp from breakpoint\n") % (n)
 
-
     deletion_size = 0
     deleted_bases = None
     insertion_size = 0
@@ -202,9 +228,9 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
         # Align split read to upstream seq (normal orientation)
         (upstream_start, upstream_end, split_start_up, split_end_up, upseq) = longestMatch(upstream_seq, split_read)
 
-        ### Needs work. Currently, different output produced using consensus (longer than split). Should trom split reads if this is the case...
+        ### Needs work. Currently, different output produced using consensus (longer than split). Should trim split reads if this is the case...
         if  upstream_start < split_start_up:
-            print("here!!")
+            print("upStart < splitStart!")
 
         ####
 
@@ -213,7 +239,7 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
         deltype = 'up'
 
         if ori == 'FR':
-            rev_split_read = reversed_seq(split_read[split_end_up:])
+            rev_split_read = reverse_complement(split_read[split_end_up:])
             print("Reversing downstream alignment of split read: %s => %s\n") % (split_read[split_end_up:], rev_split_read)
             (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, rev_split_read)
 
@@ -228,6 +254,7 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
         # Split read length - aligned portion = insetion size
         # insertion_size = int(split_len - aligned_up - aligned_down)
 
+        print(downstream_start, downstream_end, split_start, split_end, downseq)
         insertion_size = split_start
 
         #######################
@@ -238,6 +265,7 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
 
             if deletion_size == 0:
                 deletion_size = downstream_start - longest_hom
+                print(downstream_start - longest_hom)
                 if deletion_size <= 0:
                     deletion_size = 0
                     deleted_bases = None
@@ -265,6 +293,7 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
                         print(" Split read:    %s--/--%s%s%s") % (split_read[0:split_end_up-len(add2split)], add2split, deletion_fill, split_read[split_end_up:])
                         print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[0:downstream_end])
                     else:
+                        print("Here!")
                         (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, rev_split_read)
 
                         add2split = "*"*len(mhseq)
@@ -276,7 +305,6 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
 
                 else:
                     deleted_bases = downstream_seq[:deletion_size]
-
                     deletion_fill = "."*(deletion_size)
                     print("* Deletion of %s bases (%s)" % (deletion_size, upstream_seq[-deletion_size:]))
 
@@ -285,25 +313,31 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
 
                     if ori == 'FF':
                         (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read)
+                        add2split = "*"*len(mhseq)
+                        # print(split_read[split_end-add2split:split_end])
+                        difference = (split_end_up - longest_hom) + deletion_size
+                        seqbuffer = " "*(5+len(split_read[0:split_end_up-len(add2split)]))
+
+                        print(" Split read:    %s--/--%s%s%s") % (split_read[0:split_end_up-len(add2split)], deletion_fill, add2split, split_read[split_end_up:])
+                        print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[0:downstream_end])
+
                     else:
-                        (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, rev_split_read)
-                    # if longest_hom > 0 and split_read[split_start_up:split_end_up] == mhseq[:-deleted_bases]:
+                        print("here")
+                        (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(reversed_seq(downstream_seq), reversed_seq(rev_split_read))
 
-                    # difference = downstream_start - split_start
-                    # print(difference)
+                        add2split = "*"*len(mhseq)
+                        # print(split_read[split_end-add2split:split_end])
+                        difference = (split_end_up - longest_hom) + deletion_size
+                        seqbuffer = " "*(5+len(split_read[0:split_end_up-len(add2split)]))
 
-                    add2split = "*"*len(mhseq)
-                    # print(split_read[split_end-add2split:split_end])
-                    difference = (split_end_up - longest_hom) + deletion_size
-                    seqbuffer = " "*(5+len(split_read[0:split_end_up-len(add2split)]))
-
-                    print(" Split read:    %s--/--%s%s%s") % (split_read[0:split_end_up-len(add2split)], deletion_fill, add2split, split_read[split_end_up:])
-                    print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[0:downstream_end])
+                        print(" Split read:    %s--/--%s%s%s") % (split_read[0:split_end_up-len(add2split)], deletion_fill, add2split, rev_split_read[split_end_up:])
+                        print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[0:downstream_end])
 
             # microhomology with no deletion
             else:
                 deleted_bases = None
                 print("\n* No deletion at breakpoint")
+                print("here")
 
                 print(" Upstream:      %s") % (upstream_seq[upstream_start:])
                 print(" Split read:    %s--/--%s\n") % (split_read[split_start_up:split_end_up], split_read[split_end_up:len(split_read)])
@@ -314,11 +348,13 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
                     if ori == 'FF':
                         (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read[split_end_up:])
                         inserted_seq = split_read[split_end_up:split_end_up+insertion_size]
-                        seqbuffer = " "*((aligned_up+5+insertion_size+2+2))
-                        add2split = "*"*len(mhseq)
-                        add2split = ''
 
-                        print(" Split read:    %s--/--[%s]--%s%s") % (split_read[0:split_end_up], split_read[split_end_up:split_end_up+insertion_size],add2split, split_read[split_end_up+insertion_size:])
+                        print("* %s bp insertion '%s' at breakpoint\n") % (insertion_size, inserted_seq)
+
+                        seqbuffer = " "*((aligned_up+5+insertion_size+2+2))
+                        add2split = "*"*downstream_start
+
+                        print(" Split read:    %s--/--[%s]--%s%s") % (split_read[0:split_end_up], split_read[split_end_up:split_end_up+insertion_size], add2split, split_read[split_end_up+insertion_size:])
                         print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq)
                     else:
                         (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, rev_split_read)
@@ -327,7 +363,7 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
                         print("* %s bp insertion '%s' at breakpoint\n") % (insertion_size, inserted_seq)
 
                         seqbuffer = " "*((aligned_up+5+insertion_size+2+2))
-                        add2split = "*"*len(mhseq)
+                        add2split = "."*len(mhseq)
                         add2split = ''
 
                         print(" Split read:    %s--/--[%s]--%s%s") % (rev_split_read[0:split_end_up], inserted_seq, add2split, rev_split_read[split_start:split_end])
@@ -338,6 +374,7 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
                     if ori == 'FF':
                         (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read[split_end_up:])
                         difference = (downstream_start-split_start)
+                        print(downstream_start, downstream_end, split_start, split_end, downseq)
 
                         seqbuffer = " "*(5+len(split_read[0:split_end_up]))
                         nonaligned = "*"*difference
@@ -360,7 +397,6 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
         ##########################
 
         else:
-
             if deletion_size == 0:
                 deletion_size = downstream_start
                 deltype = 'down'
@@ -405,6 +441,7 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
                     (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, split_read[split_end_up:])
                 else:
                     (downstream_start, downstream_end, split_start, split_end, downseq) = longestMatch(downstream_seq, rev_split_read)
+
                 inserted_seq = split_read[split_end_up:split_end_up+insertion_size]
                 print("* %s bp insertion '%s' at breakpoint\n") % (insertion_size, inserted_seq)
 
@@ -414,9 +451,8 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
 
                 seqbuffer = " "*((aligned_up+5+insertion_size+2+2))
 
-                # What's this doing?
-                add2split = "*"*len(mhseq)
-                # add2split = ''
+                add2split = "."*downstream_start
+
 
                 print(" Split read:    %s--/--[%s]--%s%s") % (split_read[:split_end_up], split_read[split_end_up:split_end_up+insertion_size],add2split, split_read[split_end_up+insertion_size:])
                 print(" Downstream:    %s%s\n") % (seqbuffer, downstream_seq[:split_end])
@@ -465,13 +501,16 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
                 print(" Insertion:     %s%s\n") % (splitbuffer, templated_up)
             else:
                 print("Could not find at least 3 bases of inserted sequence in upstream region")
+
+            aligned=0
             (downstream_start, downstream_end, inserted_start, inserted_end, aligned) = longestMatch(downstream_seq[:n], inserted_seq)
 
             if len(aligned) >= 3:
                 templated_down = aligned
-                templated_insertion_seq = templated_down
                 if len(templated_down) > templated_insertion_size:
                     templated_insertion_size = len(templated_down)
+                    templated_insertion_seq = templated_down
+
 
                 splitbuffer = " "*(downstream_start+5)
                 print("* %s bp of inserted sequence +%s bps from breakpoint on downstream sequence") % (len(templated_down),downstream_start)
@@ -492,14 +531,28 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori):
     # Calculate mechanism
     mechanism=getMechanism(longest_hom, insertion_size, deletion_size, templated_insertion_size)
     print("* Mechanism: %s") % (mechanism)
-    print("  * %s bp '%s' microhomology at breakpoints") % (longest_hom, mhseq)
-    print("  * %s bp deletion") % (deletion_size)
-    print("  * %s bp insertion") % (insertion_size)
-    if insertion_size > 3:
-        print("  * %s bp of inserted seq '%s' found locally templated") % (templated_insertion_size, templated_insertion_seq)
+    if longest_hom > 0:
+        print("  * %s bp '%s' microhomology at breakpoints") % (longest_hom, mhseq)
+    else:
+        print("  * No microhology at breakpoints")
+    if deletion_size > 0:
+        print("  * %s bp deletion '%s' ") % (deletion_size, deleted_bases)
+    else:
+        print("  * %s bp deletion") % (deletion_size)
+
+    if insertion_size > 0:
+        print("  * %s bp insertion '%s' ") % (insertion_size, inserted_seq)
+    else:
+        print("  * %s bp insertion") % (insertion_size)
+
+    if templated_insertion_size > 3:
+        if len(templated_up)>3:
+            print("  * %s bp of inserted seq '%s' from upstream template") % (len(templated_up), templated_up)
+        if len(templated_down)>3:
+            print("  * %s bp of inserted seq '%s' from downstream template") % (len(templated_down), templated_down)
 
 
-    return(longest_hom, mhseq, homseq, deletion_size, deleted_bases, insertion_size, inserted_seq, templated_up, templated_down, templated_insertion_size)
+    return(longest_hom, mhseq, homseq, deletion_size, deleted_bases, insertion_size, inserted_seq, templated_up, templated_down, templated_insertion_size, mechanism)
 
 
 
