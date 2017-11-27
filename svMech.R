@@ -66,6 +66,16 @@ sizeGroups <- function(){
   p
 }
 
+delSize <- function(){
+  dels <- parseDels()
+  dels <- transform(dels, Sample = reorder(Sample, log10length))
+  
+  p <- ggplot(dels)
+  p <- p + geom_bar(aes(Sample, log10length,fill=Mechanism), stat='identity', alpha=0.67)
+  p
+  
+  
+}
 
 sizeDist <- function(){
   dels <- parseDels()

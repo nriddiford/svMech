@@ -37,8 +37,8 @@ def main():
     if cut is None:
         cut = 200
 
-    # genome = pysam.Fastafile("/Users/Nick_curie/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
-    genome = pysam.Fastafile("/Users/Nick/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
+    genome = pysam.Fastafile("/Users/Nick_curie/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
+    # genome = pysam.Fastafile("/Users/Nick/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
 
     run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cut)
 
@@ -105,6 +105,8 @@ def longestMatch(seq1, seq2):
 
 def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cut):
     cut = int(cut)
+    bp1_surrounding = upstream_seq
+    bp2_surrounding = downstream_seq
     if not upstream_seq:
         (chrom1, bp1, bp2) = get_parts(pos)
 
@@ -112,12 +114,20 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cu
         bp2 -= 1
         upstream = bp1 - cut
 
+        downstream_of_bp1 = bp1 + 50
+        upstream_of_bp1   = bp1 - 50
+
         upstream_seq = genome.fetch(chrom1, upstream, bp1)
+        bp1_surrounding = genome.fetch(chrom1, upstream_of_bp1, downstream_of_bp1)
         print("Upstream:   %s") % (upstream_seq[-50:])
 
         if ori == 'FF':
             downstream = bp2 + cut
             downstream_seq = genome.fetch(chrom1, bp2, downstream)
+            downstream_of_bp2 = bp2 - 50
+            upstream_of_bp2   = bp2 + 50
+            bp2_surrounding = genome.fetch(chrom1, downstream_of_bp2, upstream_of_bp2)
+
         else:
             downstream = bp2 - cut
             downstream_seq = genome.fetch(chrom1, downstream, bp2)
@@ -552,7 +562,10 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cu
             print("  * %s bp of inserted seq '%s' from downstream template") % (len(templated_down), templated_down)
 
 
-    return(longest_hom, mhseq, homseq, deletion_size, deleted_bases, insertion_size, inserted_seq, templated_up, templated_down, templated_insertion_size, mechanism)
+    print("Upstream surrounding: %s") % (bp1_surrounding)
+    print("Downstream surrounding: %s") % (bp2_surrounding)
+
+    return(longest_hom, mhseq, homseq, deletion_size, deleted_bases, insertion_size, inserted_seq, templated_up, templated_down, templated_insertion_size, mechanism, bp1_surrounding, bp2_surrounding)
 
 
 
