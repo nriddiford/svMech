@@ -68,8 +68,14 @@ setCols <- function(df, col, fill='Y',set="Pastel1"){
 
 parseDels <- function(infile='data/deletions.txt'){
   deletions <- read.delim(infile, header = T)
-  deletions$insCount<-nchar(as.character(deletions$Inserted_bases))
+  deletions$Inserted_bases <- ifelse(deletions$Inserted_bases == "None", '', as.character(deletions$Inserted_bases))
+  deletions$inslength<-nchar(as.character(deletions$Inserted_bases))
   deletions$log10length <- as.numeric(log10(deletions$Length*1000))
+  deletions$mhlength<-nchar(as.character(deletions$microhomolgy))
+  
+  deletions$insertion <- ifelse(deletions$inslength>0,1,0)
+  deletions$mh<-ifelse(nchar(as.character(deletions$microhomolgy))>0,1,0)
+  
   
   dir.create(file.path("plots"), showWarnings = FALSE)
   
@@ -77,16 +83,45 @@ parseDels <- function(infile='data/deletions.txt'){
   return(deletions)
 }
 
+mechStats <- function(){
+  dels <- parseDels()
+
+  ins <- dels %>%
+    group_by(insertion) %>%
+    summarise(n = n()) %>%
+    mutate(freq = n / sum(n))
+  
+  cat(ins$freq[2], "% deletions have sequence insertions\n")
+  
+  mhLen <- dels %>%
+    group_by(mh) %>%
+    summarise(n = n()) %>%
+    mutate(freq = n / sum(n))
+  
+  cat(mhLen$freq[2], "% deletions have at least 1 bp microhomology\n")
+  
+  dels$insMH <- ifelse(dels$mh & dels$insertion == 1, 1,0)
+  
+  coincidence <- dels %>%
+    group_by(insMH) %>%
+    summarise(n = n()) %>%
+    mutate(freq = n / sum(n))
+  
+  cat(coincidence$freq[2], "% deletions have at least 1 bp microhomology and insertion\n")
+  
+  
+  
+}
 
 delSize <- function(){
   dels <- parseDels()
   
-  cols<-setCols(dels, "Mechanism")
+  cols<-setCols(dels, "mh")
   
   dels <- transform(dels, Sample = reorder(Sample, log10length))
   
   p <- ggplot(dels, aes(Sample, log10length))
-  p <- p + geom_bar(stat='identity')
+  p <- p + geom_bar(aes(fill=as.factor(mh)),stat='identity')
   # p <- p + scale_y_continuous("Size (Kb)", labels = lseq())
   p <- p + scale_y_continuous("Size (Kb)", breaks=seq(2,as.integer(max(dels$log10length)),by=1),  labels = lseq())
   
@@ -113,7 +148,7 @@ sizeDist <- function(){
   
   p <- ggplot(dels, aes(Mechanism, log10length))
   p <- p + geom_violin(aes(fill=Mechanism),alpha=0.6)
-  p <- p + geom_point()
+  p <- p + geom_jitter(width=0.2)
   # scale_y_log10(breaks=c(0.1,1,100,1000,10000)) 
   p <- p + scale_y_continuous("Size (Kb)", labels = lseq(from=0.1, to=10000, length.out=6))
   p <- p + slideTheme() +
@@ -123,9 +158,9 @@ sizeDist <- function(){
     )
   p <- p + cols
   
-  mech_out<-paste("Mech_lengths.png")
+  mech_out<-paste("Mech_lengths.pdf")
   cat("Writing file", mech_out, "\n")
-  ggsave(paste("plots/", mech_out, sep=""), width = 20, height = 20)
+  ggsave(paste("plots/", mech_out, sep=""), width = 15, height = 10)
   p
   
 }
@@ -133,11 +168,10 @@ sizeDist <- function(){
 
 microhomologyLength <- function(){
   dels <- parseDels()
-  dels$mhlength<-nchar(as.character(dels$microhomolgy))
   
   p1 <- ggplot(dels)
   p1 <- p1 + geom_bar(aes(mhlength, (..count..)),stat='count')
-  p1 <- p1 + scale_y_continuous("Count",limits = c(0, 15), breaks=seq(0,15,by=5), expand = c(0.01, 0.01))
+  p1 <- p1 + scale_y_continuous("Count",limits = c(0, 20), breaks=seq(0,20,by=2), expand = c(0.01, 0.01))
   p1 <- p1 + scale_x_continuous("MH length")
   
   p1 <- p1 + slideTheme() +
@@ -150,7 +184,7 @@ microhomologyLength <- function(){
   
   p2 <- ggplot(dels)
   p2 <- p2 + geom_bar(aes(extendedMH),stat='count')
-  p2 <- p2 + scale_y_continuous("Count",limits = c(0, 15), breaks=seq(0,15,by=5), expand = c(0.01, 0.01))
+  p2 <- p2 + scale_y_continuous("Count",limits = c(0, 20), breaks=seq(0,20,by=2), expand = c(0.01, 0.01))
 
   p2 <- p2 + scale_x_continuous("Extended hom length", breaks=seq(min(dels$extendedMH),max(dels$extendedMH), by=1))
   
@@ -217,6 +251,20 @@ microhomologyLength <- function(){
 
 
 
+mhLengthInssize <- function(){
+  dels <- parseDels()
+
+  # cor(dels$mhlength, dels$inslength)
+  # 
+  
+  
+  p <- ggplot(dels)
+  p <- p + geom_bar(aes(insertion, (..count..), fill=as.factor(mh)), stat='count', position = 'stack')
+  p
+}
+
+
+
 
 
 
@@ -227,6 +275,9 @@ mechanisms <- function(){
   p <- p + geom_histogram(aes(Mechanism, (..count..)), stat='count')
   p
 }
+
+
+
 
 sizeGroups <- function(){
   dels <- parseDels()
@@ -239,7 +290,7 @@ sizeGroups <- function(){
   p <- p + geom_jitter(aes(colour = Mechanism), size = 3)
   # p <- p + geom_smooth(aes(group = Mechanism, colour=Mechanism), se=F)
   p <- p + geom_encircle(aes(group = Mechanism, colour = Mechanism, fill = Mechanism),alpha = 0.2)
-  p <- p + scale_y_continuous("Size (Kb)", labels = lseq())
+  # p <- p + scale_y_continuous("Size (Kb)", labels = lseq())
   p <- p + cleanTheme() +
     theme(axis.text.x=element_blank())
   # p <- p + facet_wrap(~Mechanism)
