@@ -20,7 +20,6 @@ def main():
     parser.add_argument('-o', action="store", help="Orientation of split read [Default FF. Options FR RF]", dest="ori")
     parser.add_argument('-c', action="store", help="Amount of upstream/downstream seq to consider [Default full length]", dest="cut")
 
-
     args = parser.parse_args()
     pos = args.location
     split_read = args.split
@@ -30,12 +29,11 @@ def main():
     ori = args.ori
     cut = args.cut
 
-
     if ori is None:
         ori = 'FF'
 
     if cut is None:
-        cut = 200
+        cut = 100
 
     genome = pysam.Fastafile("/Users/Nick_curie/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
     # genome = pysam.Fastafile("/Users/Nick/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
@@ -73,18 +71,14 @@ def microhomology(seq1, seq2):
 
 
 def getMechanism(homlen, inslen, delsize, templen):
-    if inslen >= 10:
-        mechanism="FoSTeS"
-    elif templen >= 5:
-        mechanism="FoSTeS"
-    elif (homlen <= 2) or (inslen >=1 and inslen <= 10):
-        mechanism="NHEJ"
-    elif homlen >= 3 and homlen <= 100:
-        mechanism="Alt-EJ"
-    elif homlen >= 100:
+    if homlen >= 100:
         mechanism="NAHR"
+    elif inslen >= 10 or templen >= 5:
+        mechanism="FoSTeS"
+    elif homlen >= 3 and homlen <= 100 and inslen == 0:
+        mechanism="Alt-EJ"
     else:
-        mechanism="NA"
+        mechanism="NHEJ"
 
     return(mechanism)
 
@@ -107,6 +101,7 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cu
     cut = int(cut)
     bp1_surrounding = upstream_seq
     bp2_surrounding = downstream_seq
+
     if not upstream_seq:
         (chrom1, bp1, bp2) = get_parts(pos)
 
@@ -114,8 +109,8 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cu
         bp2 -= 1
         upstream = bp1 - cut
 
-        downstream_of_bp1 = bp1 + 50
         upstream_of_bp1   = bp1 - 50
+        downstream_of_bp1 = bp1 + 50
 
         upstream_seq = genome.fetch(chrom1, upstream, bp1)
         bp1_surrounding = genome.fetch(chrom1, upstream_of_bp1, downstream_of_bp1)
@@ -171,17 +166,17 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cu
         print("\n* No microhomology found")
         longest_hom = 0
 
-    if n is None:
-        if longest_hom<=2:
-            n=20
-        else:
-            n=50
+
+        # if longest_hom<=2:
+        #     n=20
+        # else:
+        #     n=50
 
     ##############
     ## Homology ##
     ##############
 
-    if n >= len(upstream_seq):
+    if n > len(upstream_seq):
          n = len(upstream_seq)
 
     # upstream_seq[-n:] takes n characters from the end of the string
@@ -224,12 +219,16 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cu
     inserted_seq = None
     templated_insertion_size = 0
     templated_insertion_seq = ''
+    templated_up = ''
+    templated_down = ''
 
     if split_read is not None:
 
         if ori == 'FF':
             print("Split read: %s\n") % (split_read)
 
+    # if cut == 100:
+    #     split_read = split_read[cut:-cut]
         ###############
         ## Inserions ##
         ###############
