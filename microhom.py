@@ -20,6 +20,10 @@ def main():
     parser.add_argument('-o', action="store", help="Orientation of split read [Default FF. Options FR RF]", dest="ori")
     parser.add_argument('-c', action="store", help="Amount of upstream/downstream seq to consider [Default full length]", dest="cut")
 
+    parser.set_defaults(ori = 'FF',
+                        cut = 100,
+                        homspace = 200)
+
     args = parser.parse_args()
     pos = args.location
     split_read = args.split
@@ -28,12 +32,6 @@ def main():
     downstream_seq = args.downseq
     ori = args.ori
     cut = args.cut
-
-    if ori is None:
-        ori = 'FF'
-
-    if cut is None:
-        cut = 100
 
     genome = pysam.Fastafile("/Users/Nick_curie/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
     # genome = pysam.Fastafile("/Users/Nick/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
