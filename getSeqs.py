@@ -9,7 +9,6 @@ import pandas as pd
 
 
 def parse_variants(options):
-
     df = pd.read_csv(options.in_file, delimiter = "\t")
     df = df.where((pd.notnull(df)), None)
 
@@ -20,32 +19,45 @@ def parse_variants(options):
 
     exclude_sample = ["A373R1", "A373R7", "A512R17", "A373R11", "A785-A788R1", "A785-A788R11", "A785-A788R3", "A785-A788R5", "A785-A788R7", "A785-A788R9"]
 
-
-    # filtered_df[~filtered_df.sample.isin(exclude_sample)]
-
     filtered_df = df[~df['sample'].isin(exclude_sample)]
     filtered_df = filtered_df[filtered_df['genotype'] == 'somatic_tumour']
+    filtered_df = filtered_df[filtered_df['type'] == 'DEL']
 
 
-    #
-    # for index, variant in df.iterrows():
-    #     if variant['event']:
-    #         key = '_'.join([variant['sample'], str(variant['event'])])
-    #         seen_events[key] += 1
-    #
-    #         if seen_events[key] > 1:
-    #             # print("Seen this event before: %s, %s") % (variant['sample'], str(variant['event']))
-    #             continue
-    #
-    #     if variant['genotype'] != 'somatic_tumour':
-    #         continue
-    #
-    #     if variant['sample'] in ["A373R1", "A373R7", "A512R17", "A373R11", "A785-A788R1", "A785-A788R11", "A785-A788R3", "A785-A788R5", "A785-A788R7", "A785-A788R9"]:
-    #         continue
-    #
-    #     filtered_df = filtered_df.append(df)
+    for index, variant in filtered_df.iterrows():
+        key = '_'.join([variant['sample'], str(variant['event']), str(variant['bp_no']), str(variant['length'])])
+        seen_events[key] += 1
+
+        if seen_events[key] > 1:
+            print("Seen this event before: %s, %s") % (variant['sample'], str(variant['event']))
+            print seen_events[key]
+            continue
 
     return filtered_df
+
+
+def parseLoci(options):
+    df = pd.read_csv(options.in_file, delimiter="\t")
+    df.columns = ["chrom", "start", "end"]
+
+    df.rename(columns={'start': 'bp'}, inplace=True)
+
+    df['sample'] = 'sim'
+    # df['type'] = df.groupby(['sample']).ngroup()
+    df['type'] = df.reset_index().index
+
+    return df
+
+
+def parseBed(options):
+    df = pd.read_csv(options.in_file, delimiter="\t")
+    df.columns = ["chrom", "start", "end"]
+
+    df['sample'] = 'sim'
+    # df['type'] = df.groupby(['sample']).ngroup()
+    df['type'] = df.reset_index().index
+
+    return df
 
 
 def parse_SNV(options):
@@ -59,8 +71,8 @@ def parse_SNV(options):
     exclude_sample = ["A373R1", "A373R7", "A512R17", "A373R11", "A785-A788R1", "A785-A788R11", "A785-A788R3", "A785-A788R5", "A785-A788R7", "A785-A788R9"]
 
     filtered_df = df[~df['sample'].isin(exclude_sample)]
-
     filtered_df = filtered_df[filtered_df['a_freq']>=0.3]
+
     return filtered_df
 
 
@@ -77,14 +89,18 @@ def getSeqs(df, options):
             downstream = variant['bp'] + window/2
 
             surrounding_seq = genome.fetch(variant['chrom'], upstream, downstream)
+
             # downstream_seq = genome.fetch(variant['chrom'], variant['bp'], downstream)
 
             if options.type == 'bp':
                 seqs_out.write(">%s_%s_%s_%s_%s\n%s\n" % (variant['sample'], variant['type'], variant['length'], variant['bp_no'], window, surrounding_seq))
                 # seqs_out.write(">%s_%s_%s_%s_%s_%s\n%s\n" % (variant['sample'], variant['type'], variant['length'], variant['bp_no'], "Downstream", window, downstream_seq))
-            else:
+            elif options.type == 'snv':
                 # seqs_out.write(">%s_%s_%s:%s_%s_%s_%s\n%s\n" % (variant['sample'], variant['type'], variant['chrom'], variant['bp'], variant['a_freq'], "Upstream", window, upstream_seq))
                 seqs_out.write(">%s_%s_%s:%s_%s_%s\n%s\n" % (variant['sample'], variant['type'], variant['chrom'], variant['bp'], variant['a_freq'], window, surrounding_seq))
+            elif options.type == 'locus':
+                seqs_out.write(">%s_%s_%s:%s_%s\n%s\n" % (variant['sample'], variant['type'], variant['chrom'], variant['bp'], window, surrounding_seq))
+
 
 
 def get_args():
@@ -94,15 +110,14 @@ def get_args():
                       "--in_file",
                       dest = "in_file",
                       action = "store",
-                      help = "A sorted .bam file containing the reads " +
-                           "supporting the structural variant calls",
+                      help = "A tsv file containing variant information ",
                       metavar = "FILE")
 
     parser.add_option("-t",
                       "--type",
                       dest = "type",
                       action = "store",
-                      help = "Type of variant [bp or snv]")
+                      help = "Type of variant file [bp, snv, locus or bed]")
 
     parser.add_option("-g",
                       "--genome",
@@ -161,13 +176,20 @@ def main():
             if options.type == 'bp':
                 print("Parsing breakpoints")
                 vars = parse_variants(options)
-            else:
+            elif options.type == 'snv':
                 print("Parsing SNVs")
                 vars = parse_SNV(options)
+            elif options.type == 'bed':
+                print("Parsing bed file")
+                vars = parseBed(options)
+            elif options.type == 'locus':
+                print("Parsing genomic loci")
+                vars = parseLoci(options)
 
             getSeqs(vars, options)
+
         except IOError as err:
-            sys.stderr.write("IOError " + str(err) + "\n");
+            sys.stderr.write("IOError " + str(err) + "\n")
             return
 
 

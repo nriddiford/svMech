@@ -5,40 +5,9 @@ import sys
 import re
 from difflib import SequenceMatcher
 from string import maketrans
+from optparse import OptionParser
 
 from Bio.Seq import Seq
-
-import argparse
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-g', action="store", help="Genome fasta file", dest='genomeFile')
-    parser.add_argument('-p', action="store", help="Breakpoint position (chr:bp1-bp2) [Required]", dest='location')
-    parser.add_argument('-s', action="store", help="Split read sequence for detection of insertions", dest="split")
-    parser.add_argument('-n', action="store", help="Number of bases to look for extended homology. [Default: 200 if microhomology found, 10 if not]", dest='homspace',type=int)
-    parser.add_argument('-up', action="store", help="Upstream sequence", dest="upseq")
-    parser.add_argument('-down', action="store", help="Upstream sequence", dest="downseq")
-    parser.add_argument('-o', action="store", help="Orientation of split read [Default FF. Options FR RF]", dest="ori")
-    parser.add_argument('-c', action="store", help="Amount of upstream/downstream seq to consider [Default full length]", dest="cut")
-
-    parser.set_defaults(ori = 'FF',
-                        cut = 100,
-                        homspace = 200,
-                        genomeFile = "/Users/Nick_curie/Documents/Curie/Data/Genomes/Dmel_v6.12/Dmel_6.12.fasta")
-
-    args = parser.parse_args()
-    pos = args.location
-    split_read = args.split
-    n=args.homspace
-    upstream_seq = args.upseq
-    downstream_seq = args.downseq
-    ori = args.ori
-    cut = args.cut
-    genome = pysam.Fastafile(args.genomeFile)
-
-    run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cut)
-
 
 def reverse_complement(seq):
     return seq.translate(maketrans('ACGTacgt', 'TGCAtgca'))
@@ -105,23 +74,31 @@ def longestMatch(seq1, seq2):
 def reverse_string(s):
     return s[::-1]
 
-def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cut):
-    cut = int(cut)
+def run_script(options):
+
+    split_read = options.split
+    n = options.nbases
+    upstream_seq = options.upstream
+    downstream_seq = options.downstream
+    ori = options.orientation
+    cut = int(options.cut)
+    genome = pysam.Fastafile(options.genome)
+
     bp1_surrounding = upstream_seq
     bp2_surrounding = downstream_seq
 
     if not upstream_seq:
-        (chrom1, bp1, bp2) = get_parts(pos)
+        (chrom1, bp1, bp2) = get_parts(options.position)
 
         bp2 -= 1
         upstream = bp1 - cut
-
-        upstream_of_bp1   = bp1 - 50
+        upstream_of_bp1 = bp1 - 50
         downstream_of_bp1 = bp1 + 50
 
         upstream_seq = genome.fetch(chrom1, upstream, bp1)
         bp1_surrounding = genome.fetch(chrom1, upstream_of_bp1, downstream_of_bp1)
-        print("Upstream:   %s") % (upstream_seq[-50:])
+        # print("Upstream:   %s") % (upstream_seq[-50:])
+        print("Sequence surrounding bp1: %s - %s") % (bp1_surrounding[:50], bp1_surrounding[50:])
 
         if ori == 'FF':
             downstream = bp2 - cut
@@ -139,10 +116,10 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cu
             print("Reversed downstream: %s") % (reversed_seq(downstream_seq))
             downstream_seq = reversed_seq(downstream_seq)
         # upstream_seq = reverse_complement(upstream_n)
-
-    ##################
-    ## Microhomology ##
-    ##################
+    #
+    # ##################
+    # ## Microhomology ##
+    # ##################
     if upstream_seq:
         if ori == 'FF':
             print("Downstream: %s") % (reverse_string(seq_in_sv[:50]))
@@ -577,10 +554,43 @@ def run_script(pos, n, split_read, genome, upstream_seq, downstream_seq, ori, cu
     return(longest_hom, mhseq, homseq, deletion_size, deleted_bases, insertion_size, inserted_seq, templated_up, templated_down, templated_insertion_size, mechanism, bp1_surrounding, bp2_surrounding)
 
 
+def get_args():
+    parser = OptionParser()
 
-    #
+    parser.add_option('-g', "--genome", dest="genome", action="store", help="Genome fasta file")
+    parser.add_option('-p', "--position", dest="position", action="store", help="Breakpoint position (chr:bp1-bp2) [Required]")
+    parser.add_option('-s', "--split", dest="split", action="store", help="Split read sequence for detection of insertions")
+    parser.add_option('-n', "--nbases", dest="nbases", type=int, action="store", help="Number of bases to look for extended homology. [Default: 200 if microhomology found, 10 if not]")
+    parser.add_option("--upstream", dest="upstream", action="store", help="Upstream sequence")
+    parser.add_option('--downstream', dest="downstream", action="store", help="Downstream sequence")
+    parser.add_option('--orientation', dest="orientation", action="store", help="Orientation of split read [Default FF. Options FR RF]")
+    parser.add_option('-c', "--cut", dest="cut", action="store", help="Amount of upstream/downstream seq to consider [Default full length]")
+
+    parser.set_defaults(orientation = 'FF',
+                        cut = 100,
+                        nbases = 50,
+                        genome = "/Users/Nick_curie/Desktop/script_test/svMech/data/testGenome2.fa")
 
 
+    options, args = parser.parse_args()
 
-if __name__ == '__main__':
-    main()
+    if options.position is None:
+        parser.print_help()
+        print
+
+    return options, args
+
+
+def main():
+    options, args = get_args()
+
+    if options.position:
+        try:
+            run_script(options)
+        except IOError as err:
+            sys.stderr.write("IOError " + str(err) + "\n")
+            return
+
+
+if __name__ == "__main__":
+    sys.exit(main())
